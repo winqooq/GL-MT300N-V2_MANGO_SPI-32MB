@@ -28,13 +28,14 @@ jobs:
     - name: Apply 32MB Flash Patch (DTS Modification)
       run: |
         cd openwrt
-        DTS_FILE="target/linux/ramips/dts/mt7628an_gl-mt300n-v2.dts"
-        if [ -f "$DTS_FILE" ]; then
-          # Автоматически заменяем размер чипа на 32МБ (0x2000000)
+        # Ищем файл DTS автоматически по маске
+        DTS_FILE=$(find target/linux -name "*gl-mt300n-v2*.dts" | head -n 1)
+        if [ -n "$DTS_FILE" ] && [ -f "$DTS_FILE" ]; then
+          echo "Found DTS file: $DTS_FILE"
           sed -i 's/reg = <0x0 0x1000000>;/reg = <0x0 0x2000000>;/g' "$DTS_FILE"
           echo "DTS successfully patched for 32MB flash!"
         else
-          echo "Error: DTS file not found!"
+          echo "Error: DTS file not found anywhere!"
           exit 1
         fi
 
