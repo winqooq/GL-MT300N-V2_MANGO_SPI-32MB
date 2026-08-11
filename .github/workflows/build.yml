@@ -20,10 +20,10 @@ jobs:
         sudo apt-get install -y build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev swig file wget
         sudo timedatectl set-timezone "Europe/Kyiv"
 
-    - name: Clone OpenWrt Source (v25)
+    - name: Clone OpenWrt Source
       run: |
-        # Клонируем ветку OpenWrt версии 25
-        git clone -b openwrt-25.xx https://github.com/openwrt/openwrt.git openwrt
+        # Клонируем актуальную основную ветку разработки
+        git clone -b main https://github.com/openwrt/openwrt.git openwrt
 
     - name: Apply 32MB Flash Patch (DTS Modification)
       run: |
