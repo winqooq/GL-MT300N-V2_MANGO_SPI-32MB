@@ -57,7 +57,7 @@ jobs:
     - name: Compile Firmware
       run: |
         cd openwrt
-        make defconfig
+        yes "" | make oldconfig
         make -j4 V=s
 
     - name: Organize Firmware Files
