@@ -22,8 +22,8 @@ jobs:
 
     - name: Clone OpenWrt Source
       run: |
-        # Клонируем актуальную основную ветку разработки
-        git clone -b main https://github.com/openwrt/openwrt.git openwrt
+        # Клонируем стабильную ветку OpenWrt 25.12 (с поддержкой apk)
+        git clone -b openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
 
     - name: Update Feeds
       run: |
