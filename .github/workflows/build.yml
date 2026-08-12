@@ -49,16 +49,29 @@ jobs:
     - name: Generate Correct Configuration for Mango (MT76x8)
       run: |
         cd openwrt
-        # 1. Set the base target and subtarget, then initialize defaults
+        # 1. Задаем базовый чипсет и генерируем базовый конфиг
         echo "CONFIG_TARGET_ramips=y" > .config
         echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
         make defconfig
-        
-        # 2. Append the specific Mango device profile and LuCI package
-        echo "CONFIG_TARGET_DEVICE_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y" >> .config
+
+        # 2. Автоматически ищем правильный ключ устройства для Mango (mt300n) в сгенерированном .config
+        echo "Searching for Mango device key in .config..."
+        DEVICE_LINE=$(grep -i "mt300n" .config | head -n 1 || true)
+        echo "Found line: $DEVICE_LINE"
+
+        if [ -n "$DEVICE_LINE" ]; then
+          # Извлекаем имя ключа до знака '='
+          DEVICE_KEY=$(echo "$DEVICE_LINE" | cut -d'=' -f1)
+          echo "Enabling target device: $DEVICE_KEY=y"
+          # Меняем состояние этого ключа на '=y'
+          sed -i "s/^${DEVICE_KEY}=.*/${DEVICE_KEY}=y/g" .config
+        else
+          echo "Error: Could not find mt300n device in config options!"
+          exit 1
+        fi
+
+        # 3. Добавляем веб-интерфейс LuCI и финализируем конфиг
         echo "CONFIG_PACKAGE_luci=y" >> .config
-        
-        # 3. Finalize configuration while keeping the device selection
         make defconfig
 
     - name: Initialize Build Configuration
