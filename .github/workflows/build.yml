@@ -65,12 +65,12 @@ jobs:
       if: success()
       run: |
         cd openwrt/bin/targets/*/*
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
 
     - name: Upload Firmware Artifacts
       uses: actions/upload-artifact@v4
       if: steps.organize.outputs.status == 'success'
       with:
         name: openwrt-mango-spi-32mb-fw
-        path: ${{ env.FIRMWARE }}/*sysupgrade.bin
+        path: ${{ env.FIRMWARE_PATH }}/*sysupgrade.bin
