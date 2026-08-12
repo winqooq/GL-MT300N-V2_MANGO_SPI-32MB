@@ -39,8 +39,11 @@ jobs:
         DTS_FILE=$(find target/linux -name "*gl-mt300n-v2*.dts" | head -n 1)
         if [ -n "$DTS_FILE" ] && [ -f "$DTS_FILE" ]; then
           echo "Found DTS file: $DTS_FILE"
+          # 1. Увеличиваем общий размер чипа до 32MB
           sed -i 's/reg = <0x0 0x1000000>;/reg = <0x0 0x2000000>;/g' "$DTS_FILE"
-          echo "DTS successfully patched for 32MB flash!"
+          # 2. Растягиваем раздел firmware на весь оставшийся объем 32MB чипа
+          sed -i 's/reg = <0x50000 0xfb0000>;/reg = <0x50000 0x1fb0000>;/g' "$DTS_FILE"
+          echo "DTS successfully patched for full 32MB flash storage!"
         else
           echo "Error: DTS file not found anywhere!"
           exit 1
