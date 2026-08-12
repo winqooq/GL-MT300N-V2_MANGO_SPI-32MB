@@ -46,13 +46,13 @@ jobs:
           exit 1
         fi
 
-    - name: Generate Correct Configuration for Mango (MT7628)
+    - name: Generate Correct Configuration for Mango (MT76x8)
       run: |
         cd openwrt
         # Создаем чистый файл .config с правильными параметрами для Mango
         echo "CONFIG_TARGET_ramips=y" > .config
-        echo "CONFIG_TARGET_ramips_mt7628=y" >> .config
-        echo "CONFIG_TARGET_DEVICE_ramips_mt7628_DEVICE_gl-mt300n-v2=y" >> .config
+        echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
+        echo "CONFIG_TARGET_DEVICE_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y" >> .config
         echo "CONFIG_PACKAGE_luci=y" >> .config
         
         # Применяем конфигурацию
