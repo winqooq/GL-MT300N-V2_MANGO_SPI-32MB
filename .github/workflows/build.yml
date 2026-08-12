@@ -55,19 +55,10 @@ jobs:
           exit 1
         fi
 
-    - name: Force Correct Device (Mango gl-mt300n-v2)
+    - name: Initialize Build Configuration
       run: |
         cd openwrt
-        # Инициализируем базовую конфигурацию
-        make defconfig
-        
-        # Принудительно и безопасно прописываем целевое устройство через скрипт OpenWrt
-        ./scripts/config --set-val CONFIG_TARGET_ramips y
-        ./scripts/config --set-val CONFIG_TARGET_ramips_mt7628 y
-        ./scripts/config --set-val CONFIG_TARGET_DEVICE_ramips_mt7628_DEVICE_gl-mt300n-v2 y
-        ./scripts/config --set-val CONFIG_PACKAGE_luci y
-        
-        # Финальная валидация конфигурации
+        # make defconfig прочитает ваш .config и корректно применит настройки для Mango
         make defconfig
 
     - name: Compile Firmware
