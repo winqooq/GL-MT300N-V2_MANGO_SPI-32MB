@@ -49,13 +49,16 @@ jobs:
     - name: Generate Correct Configuration for Mango (MT76x8)
       run: |
         cd openwrt
-        # Создаем чистый файл .config с правильными параметрами для Mango
+        # 1. Set the base target and subtarget, then initialize defaults
         echo "CONFIG_TARGET_ramips=y" > .config
         echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
+        make defconfig
+        
+        # 2. Append the specific Mango device profile and LuCI package
         echo "CONFIG_TARGET_DEVICE_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y" >> .config
         echo "CONFIG_PACKAGE_luci=y" >> .config
         
-        # Применяем конфигурацию
+        # 3. Finalize configuration while keeping the device selection
         make defconfig
 
     - name: Initialize Build Configuration
