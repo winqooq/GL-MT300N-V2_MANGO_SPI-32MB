@@ -28,7 +28,8 @@ jobs:
     - name: Update Feeds
       run: |
         cd openwrt
-        ./scripts/feeds update -a
+        # Пробуем обновить фиды до двух раз в случае сетевой ошибки
+        ./scripts/feeds update -a || ./scripts/feeds update -a
         ./scripts/feeds install -a
 
     - name: Apply 32MB Flash Patch (DTS Modification)
