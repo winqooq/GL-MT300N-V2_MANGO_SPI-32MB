@@ -46,13 +46,17 @@ jobs:
           exit 1
         fi
 
-    - name: Load Custom Configuration (.config)
+    - name: Generate Correct Configuration for Mango (MT7628)
       run: |
-        if [ -f .config ]; then
-          cp .config openwrt/.config
-        else
-          echo "Error: .config file not found in repository root!"
-          exit 1
+        cd openwrt
+        # Создаем чистый файл .config с правильными параметрами для Mango
+        echo "CONFIG_TARGET_ramips=y" > .config
+        echo "CONFIG_TARGET_ramips_mt7628=y" >> .config
+        echo "CONFIG_TARGET_DEVICE_ramips_mt7628_DEVICE_gl-mt300n-v2=y" >> .config
+        echo "CONFIG_PACKAGE_luci=y" >> .config
+        
+        # Применяем конфигурацию
+        make defconfig
         fi
 
     - name: Initialize Build Configuration
