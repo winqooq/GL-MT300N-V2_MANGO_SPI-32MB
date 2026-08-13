@@ -1,6 +1,6 @@
 name: Build OpenWrt for GL.iNet GL-MT300N V2 (Mango) [SPI-32MB_Mod]
         # TEST bild v.0.0.3
-        # Create code by Copilot and winqooq
+        # Create code by Gemini and winqooq
 on:
   workflow_dispatch:
 jobs:
@@ -11,7 +11,7 @@ jobs:
       OWRT_VERSION: "25.12.2"
       DEVICE_NAME: "glinet_gl-mt300n-v2"
       MOD_NAME: "SPI32Mod"
-      MOD_TYPE: "clean"
+      MOD_TYPE: "test"
 
     steps:
       - name: Checkout repository
@@ -110,22 +110,24 @@ jobs:
           # 3. Добавляем веб-интерфейс LuCI
           cat << 'EOF' >> .config
           CONFIG_PACKAGE_luci=y
+          # Базовые USB-драйверы ядра
+          CONFIG_PACKAGE_usbutils=y
+          CONFIG_PACKAGE_kmod-usb-core=y
+          CONFIG_PACKAGE_kmod-usb2=y
           
-          # Добавляем пакеты для Android USB Tettering
-          CONFIG_PACKAGE_kmod-usb-net-rndis=y
-          
-          # Добавляем пакеты для LTE-модемов (только MBIM)
+          # Драйверы для MBIM и RNDIS
           CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
-          CONFIG_PACKAGE_modemmanager=y
-          CONFIG_PACKAGE_luci-proto-modemmanager=y
-          CONFIG_PACKAGE_libmbim=y
-          CONFIG_PACKAGE_picocom=y
-          
-          # Добавляем пакеты для работы модема через AT-команды и WWAN
+          CONFIG_PACKAGE_kmod-usb-net-rndis=y
           CONFIG_PACKAGE_kmod-wwan=y
           CONFIG_PACKAGE_kmod-usb-serial=y
           CONFIG_PACKAGE_kmod-usb-serial-option=y
           CONFIG_PACKAGE_usb-modeswitch=y
+          
+          # Полноценный стек ModemManager
+          CONFIG_PACKAGE_modemmanager=y
+          CONFIG_PACKAGE_luci-proto-modemmanager=y
+          CONFIG_PACKAGE_libmbim=y
+          CONFIG_PACKAGE_picocom=y
           EOF
 
           # 4. Финализируем конфигурацию с учетом добавленных пакетов
@@ -146,7 +148,7 @@ jobs:
           SRC_FILE=$(ls *-sysupgrade.bin | head -n 1)
           
           # Формируем логичное имя из глобальных переменных env
-          NEW_NAME="openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-${{ env.MOD_TYPE }}-sysupgrade.bin"
+          NEW_NAME="openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-${{ env.MOD_TYPE }}-squashfs-sysupgrade.bin"
           
           # Переименовываем файл
           mv "$SRC_FILE" "$NEW_NAME"
