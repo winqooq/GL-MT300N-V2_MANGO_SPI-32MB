@@ -1,1 +1,3 @@
-# GL-MT300N-V2_MANGO_SPI-32MB
+# GL-MT300N-V2 (MANGO)
+# OpenWRT Mod on SPI 32MB Flash
+# + RNDIS+MBIM and slu...
