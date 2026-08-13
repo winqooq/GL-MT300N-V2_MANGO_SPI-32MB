@@ -55,26 +55,6 @@ jobs:
           exit 1
         fi
 
-    - name: Apply Custom Settings (IP & Hostname)
-      run: |
-        cd openwrt
-        # Создаем структуру uci-defaults, чтобы настройки применились при первом запуске роутера
-        mkdir -p files/etc/uci-defaults
-        cat << 'EOF' > files/etc/uci-defaults/99-custom-settings
-        #!/bin/sh
-        
-        # Установка сетевого имени (Hostname)
-        uci set system.@system[0].hostname='Mango'
-        uci commit system
-
-        # Установка IP-адреса LAN по умолчанию в подсеть GL.iNet (192.168.8.1)
-        uci set network.lan.ipaddr='192.168.8.1'
-        uci commit network
-
-        exit 0
-        EOF
-        chmod +x files/etc/uci-defaults/99-custom-settings
-
     - name: Generate Configuration
       run: |
         cd openwrt
@@ -88,11 +68,11 @@ jobs:
 
         # 3. Добавляем веб-интерфейс LuCI и пакеты для работы с MBIM LTE-модемами
         echo "CONFIG_PACKAGE_luci=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y" >> .config
-        echo "CONFIG_PACKAGE_modemmanager=y" >> .config
-        echo "CONFIG_PACKAGE_luci-proto-modemmanager=y" >> .config
-        echo "CONFIG_PACKAGE_libmbim=y" >> .config
-        echo "CONFIG_PACKAGE_picocom=y" >> .config
+        # echo "CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y" >> .config
+        # echo "CONFIG_PACKAGE_modemmanager=y" >> .config
+        # echo "CONFIG_PACKAGE_luci-proto-modemmanager=y" >> .config
+        # echo "CONFIG_PACKAGE_libmbim=y" >> .config
+        # echo "CONFIG_PACKAGE_picocom=y" >> .config
 
         # 4. Финализируем конфигурацию с учетом добавленных пакетов
         make defconfig
