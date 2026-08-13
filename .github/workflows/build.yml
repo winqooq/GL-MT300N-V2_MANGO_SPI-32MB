@@ -1,17 +1,17 @@
 name: Build OpenWrt for GL.iNet GL-MT300N V2 (Mango) [SPI-32MB_Mod]
-
+        # TEST bild v.X.X.X
+        # Create code by Copilot
 on:
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    # Глобальные переменные для удобного управления версией и названием файлов
     env:
       OWRT_VERSION: "25.12.2"
       DEVICE_NAME: "glinet_gl-mt300n-v2"
       MOD_NAME: "spi32mod"
-
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -20,7 +20,6 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        # Удаляем лишнее ПО и устанавливаем все необходимые зависимости для сборки OpenWrt
         sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/node_modules
         sudo apt-get update
         sudo apt-get install -y build-essential clang flex bison g++ gawk gcc-multilib g++-multilib gettext git libncurses5-dev libssl-dev python3-distutils rsync unzip zlib1g-dev swig file wget subversion
@@ -28,96 +27,94 @@ jobs:
 
     - name: Clone OpenWrt Source
       run: |
-        # Клонируем стабильную ветку OpenWrt 25.12 (с поддержкой apk)
         git clone -b openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
 
     - name: Update Feeds
       run: |
         cd openwrt
-        # Пробуем обновить фиды до двух раз на случай сетевых сбоев
         ./scripts/feeds update -a || ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: Apply 32MB Flash Patch (DTS Modification & Image Size)
+    - name: Apply 32MB Flash Patch (DTS Modification)
       run: |
         cd openwrt
-        
-        # 1. Ищем и патчим DTS для переразметки разделов памяти
         DTS_FILE=$(find target/linux -name "*gl-mt300n-v2*.dts" | head -n 1)
         if [ -n "$DTS_FILE" ] && [ -f "$DTS_FILE" ]; then
-          echo "Found DTS file: $DTS_FILE"
           sed -i 's/reg = <0x0 0x1000000>;/reg = <0x0 0x2000000>;/g' "$DTS_FILE"
           sed -i 's/reg = <0x50000 0xfb0000>;/reg = <0x50000 0x1fb0000>;/g' "$DTS_FILE"
-          echo "DTS successfully patched for full 32MB flash storage!"
         else
           echo "Error: DTS file not found!"
           exit 1
         fi
 
-        # 2. Ищем и патчим Makefile для увеличения лимита генерации образа
-        MK_FILE=$(find target/linux/ramips/image -name "mt76x8.mk" | head -n 1)
-        if [ -n "$MK_FILE" ] && [ -f "$MK_FILE" ]; then
-          echo "Found Makefile: $MK_FILE"
-          # Ищем блок устройства и меняем IMAGE_SIZE на ~32MB (32768k минус размер u-boot)
-          sed -i '/define Device\/glinet_gl-mt300n-v2/,/endef/ s/IMAGE_SIZE := .*/IMAGE_SIZE := 32448k/g' "$MK_FILE"
-          echo "Makefile IMAGE_SIZE correctly increased to 32MB!"
-        else
-          echo "Error: mt76x8.mk file not found!"
-          exit 1
-        fi
-
-    - name: Set Custom Hostname and LAN IP
+    - name: Apply Custom Settings (IP, DHCP, Firewall)
       run: |
         cd openwrt
         mkdir -p files/etc/uci-defaults
         cat << 'EOF' > files/etc/uci-defaults/99-custom-settings
         #!/bin/sh
-        
-        # Настраиваем hostname и LAN с длиной префикса (CIDR /24) для OpenWrt 25+
-        uci -q batch << EOI
-        set system.@system[0].hostname='Mango'
-        set network.lan.ipaddr='192.168.8.1/24'
-        delete network.lan.netmask
-        commit system
-        commit network
-        EOI
-        
+        # Hostname
+        uci set system.@system[0].hostname='Mango'
+        uci commit system
+
+        # Bridge br-lan
+        uci add network device
+        uci set network.@device[-1].name='br-lan'
+        uci set network.@device[-1].type='bridge'
+        uci set network.@device[-1].ports='eth0'
+
+        # LAN interface
+        uci set network.lan.device='br-lan'
+        uci set network.lan.proto='static'
+        uci set network.lan.ipaddr='192.168.8.1'
+        uci set network.lan.netmask='255.255.255.0'
+        uci commit network
+
+        # DHCP
+        uci set dhcp.lan=dhcp
+        uci set dhcp.lan.interface='lan'
+        uci set dhcp.lan.start='100'
+        uci set dhcp.lan.limit='150'
+        uci set dhcp.lan.leasetime='12h'
+        uci commit dhcp
+
+        # Firewall zone LAN
+        uci set firewall.@zone[0].name='lan'
+        uci set firewall.@zone[0].network='lan'
+        uci set firewall.@zone[0].input='ACCEPT'
+        uci set firewall.@zone[0].output='ACCEPT'
+        uci set firewall.@zone[0].forward='ACCEPT'
+        uci commit firewall
+
         exit 0
         EOF
-        
-        # Согласно документации OpenWrt, скрипты uci-defaults не должны быть исполняемыми в папке files
-        chmod -x files/etc/uci-defaults/99-custom-settings
+        chmod +x files/etc/uci-defaults/99-custom-settings
 
     - name: Generate Configuration
       run: |
         cd openwrt
-        
-        # 1. Задаем базовый чипсет и генерируем заготовку конфигурации
         echo "CONFIG_TARGET_ramips=y" > .config
         echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
         make defconfig
-
-        # 2. Принудительно включаем профиль роутера Mango через sed
         sed -i 's/# CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2 is not set/CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y/g' .config
 
-        # 3. Добавляем веб-интерфейс LuCI и пакеты для LTE-модемов
-        cat << 'EOF' >> .config
-        CONFIG_PACKAGE_luci=y
-        CONFIG_PACKAGE_kmod-usb-net-rndis=y
-        CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
-        CONFIG_PACKAGE_modemmanager=y
-        CONFIG_PACKAGE_luci-proto-modemmanager=y
-        CONFIG_PACKAGE_libmbim=y
-        CONFIG_PACKAGE_picocom=y
-        EOF
+        # LuCI + modem support
+        echo "CONFIG_PACKAGE_luci=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y" >> .config
+        echo "CONFIG_PACKAGE_modemmanager=y" >> .config
+        echo "CONFIG_PACKAGE_luci-proto-modemmanager=y" >> .config
+        echo "CONFIG_PACKAGE_libmbim=y" >> .config
+        echo "CONFIG_PACKAGE_picocom=y" >> .config
 
-        # 4. Просчитываем и связываем зависимости всех добавленных пакетов
+        # DHCP packages
+        echo "CONFIG_PACKAGE_dnsmasq=y" >> .config
+        echo "CONFIG_PACKAGE_odhcpd-ipv6only=y" >> .config
+
         make defconfig
 
     - name: Compile Firmware
       run: |
         cd openwrt
-        # Запускаем компиляцию прошивки, используя все доступные ядра процессора
         make -j$(nproc) V=s
 
     - name: Organize and Rename Firmware
@@ -125,16 +122,9 @@ jobs:
       if: success()
       run: |
         cd openwrt/bin/targets/*/*
-        # Находим исходный скомпилированный bin-файл
         SRC_FILE=$(ls *-sysupgrade.bin | head -n 1)
-        
-        # Формируем логичное имя из глобальных переменных env
         NEW_NAME="openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-squashfs-sysupgrade.bin"
-        
-        # Переименовываем файл
         mv "$SRC_FILE" "$NEW_NAME"
-        
-        # Передаем переменные для шага загрузки артефакта
         echo "status=success" >> $GITHUB_OUTPUT
         echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
         echo "FIRMWARE_NAME=$NEW_NAME" >> $GITHUB_ENV
@@ -143,7 +133,5 @@ jobs:
       uses: actions/upload-artifact@v4
       if: steps.organize.outputs.status == 'success'
       with:
-        # Название ZIP-архива, который будет скачиваться из GitHub Actions
         name: openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}
-        # Файл, который помещается внутрь архива
         path: ${{ env.FIRMWARE_PATH }}/${{ env.FIRMWARE_NAME }}
