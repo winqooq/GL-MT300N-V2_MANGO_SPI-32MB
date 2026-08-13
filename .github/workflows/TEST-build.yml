@@ -165,4 +165,4 @@ jobs:
           # Название ZIP-архива, который будет скачиваться из GitHub Actions
           name: openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-${{ env.MOD_TYPE }}
           # Файл, который помещается внутрь архива
-          path: ${{ env.FIRMWARE_PATH }}/${{ env.FIRMWARE_NAME }}-${{ env.MOD_TYPE }}
+          path: ${{ env.FIRMWARE_PATH }}/${{ env.FIRMWARE_NAME }}
