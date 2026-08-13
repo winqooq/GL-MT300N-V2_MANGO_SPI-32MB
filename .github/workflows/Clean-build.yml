@@ -1,6 +1,6 @@
 name: Build OpenWrt for GL.iNet GL-MT300N V2 (Mango) [SPI-32MB_Mod]
         # Clear bild v.0.0.1
-        # Create code by Gemini
+        # Create code by Gemini and winqooq
 
 on:
   workflow_dispatch:
@@ -53,10 +53,41 @@ jobs:
           sed -i 's/reg = <0x50000 0xfb0000>;/reg = <0x50000 0x1fb0000>;/g' "$DTS_FILE"
           echo "DTS successfully patched for full 32MB flash storage!"
         else
-          echo "Error: DTS file not found anywhere!"
+          echo "Error: DTS file not found!"
           exit 1
         fi
-
+        # 2. Ищем и патчим Makefile для увеличения лимита генерации образа
+        MK_FILE=$(find target/linux/ramips/image -name "mt76x8.mk" | head -n 1)
+        if [ -n "$MK_FILE" ] && [ -f "$MK_FILE" ]; then
+          echo "Found Makefile: $MK_FILE"
+          # Ищем блок устройства и меняем IMAGE_SIZE на ~32MB (32768k минус размер u-boot)
+          sed -i '/define Device\/glinet_gl-mt300n-v2/,/endef/ s/IMAGE_SIZE := .*/IMAGE_SIZE := 32448k/g' "$MK_FILE"
+          echo "Makefile IMAGE_SIZE correctly increased to 32MB!"
+        else
+          echo "Error: mt76x8.mk file not found!"
+          exit 1
+        fi
+    - name: Set Custom Hostname and LAN IP
+      run: |
+        cd openwrt
+        mkdir -p files/etc/uci-defaults
+        cat << 'EOF' > files/etc/uci-defaults/99-custom-settings
+        #!/bin/sh
+        
+        # Настраиваем hostname и LAN с длиной префикса (CIDR /24) для OpenWrt 25+
+        uci -q batch << EOI
+        set system.@system[0].hostname='Mango'
+        set network.lan.ipaddr='192.168.8.1/24'
+        delete network.lan.netmask
+        commit system
+        commit network
+        EOI
+        
+        exit 0
+        EOF
+        
+        # Согласно документации OpenWrt, скрипты uci-defaults не должны быть исполняемыми в папке files
+        chmod -x files/etc/uci-defaults/99-custom-settings
     - name: Generate Configuration
       run: |
         cd openwrt
