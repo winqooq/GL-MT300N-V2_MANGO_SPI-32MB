@@ -106,15 +106,25 @@ jobs:
           # 2. Принудительно применим профиль роутера Mango
           sed -i 's/# CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2 is not set/CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y/g' .config
 
-          # 3. Добавляем веб-интерфейс LuCI и пакеты для LTE-модемов
+          # 3. Добавляем веб-интерфейс LuCI
           cat << 'EOF' >> .config
           CONFIG_PACKAGE_luci=y
+          
+          # Добавляем пакеты для Android USB Tettering
           CONFIG_PACKAGE_kmod-usb-net-rndis=y
+          
+          # Добавляем пакеты для LTE-модемов (только MBIM)
           CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
           CONFIG_PACKAGE_modemmanager=y
           CONFIG_PACKAGE_luci-proto-modemmanager=y
           CONFIG_PACKAGE_libmbim=y
           CONFIG_PACKAGE_picocom=y
+          
+          # Добавляем пакеты для работы модема через AT-команды и WWAN
+          CONFIG_PACKAGE_kmod-wwan=y
+          CONFIG_PACKAGE_kmod-usb-serial=y
+          CONFIG_PACKAGE_kmod-usb-serial-option=y
+          CONFIG_PACKAGE_usb-modeswitch=y
           EOF
 
           # 4. Финализируем конфигурацию с учетом добавленных пакетов
