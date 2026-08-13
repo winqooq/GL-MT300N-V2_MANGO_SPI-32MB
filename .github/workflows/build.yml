@@ -11,7 +11,7 @@ jobs:
       OWRT_VERSION: "25.12.2"
       DEVICE_NAME: "glinet_gl-mt300n-v2"
       MOD_NAME: "spi32mod"
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -55,6 +55,20 @@ jobs:
           exit 1
         fi
 
+    - name: Set Custom Hostname and LAN IP
+      run: |
+        cd openwrt
+        mkdir -p files/etc/uci-defaults
+        cat << 'EOF' > files/etc/uci-defaults/99-custom-settings
+        #!/bin/sh
+        uci set system.@system[0].hostname='Mango'
+        uci set network.lan.ipaddr='192.168.8.1'
+        uci commit system
+        uci commit network
+        exit 0
+        EOF
+        chmod +x files/etc/uci-defaults/99-custom-settings
+
     - name: Generate Configuration
       run: |
         cd openwrt
@@ -66,13 +80,14 @@ jobs:
         # 2. Принудительно применим профиль роутера Mango
         sed -i 's/# CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2 is not set/CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y/g' .config
 
-        # 3. Добавляем веб-интерфейс LuCI и пакеты для работы с MBIM LTE-модемами
+        # 3. Добавляем веб-интерфейс LuCI, пакеты RNDIS и MBIM для LTE-модемов
         echo "CONFIG_PACKAGE_luci=y" >> .config
-        # echo "CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y" >> .config
-        # echo "CONFIG_PACKAGE_modemmanager=y" >> .config
-        # echo "CONFIG_PACKAGE_luci-proto-modemmanager=y" >> .config
-        # echo "CONFIG_PACKAGE_libmbim=y" >> .config
-        # echo "CONFIG_PACKAGE_picocom=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-usb-net-rndis=y" >> .config
+        echo "CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y" >> .config
+        echo "CONFIG_PACKAGE_modemmanager=y" >> .config
+        echo "CONFIG_PACKAGE_luci-proto-modemmanager=y" >> .config
+        echo "CONFIG_PACKAGE_libmbim=y" >> .config
+        echo "CONFIG_PACKAGE_picocom=y" >> .config
 
         # 4. Финализируем конфигурацию с учетом добавленных пакетов
         make defconfig
