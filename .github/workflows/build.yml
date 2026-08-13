@@ -72,24 +72,27 @@ jobs:
     - name: Generate Configuration
       run: |
         cd openwrt
-        # 1. Задаем базовый чипсет и генерируем заготовку конфигурации
-        echo "CONFIG_TARGET_ramips=y" > .config
-        echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
-        make defconfig
-
-        # 2. Принудительно применим профиль роутера Mango
-        sed -i 's/# CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2 is not set/CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y/g' .config
-
-        # 3. Добавляем веб-интерфейс LuCI, пакеты RNDIS и MBIM для LTE-модемов
-        echo "CONFIG_PACKAGE_luci=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-usb-net-rndis=y" >> .config
-        echo "CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y" >> .config
-        echo "CONFIG_PACKAGE_modemmanager=y" >> .config
-        echo "CONFIG_PACKAGE_luci-proto-modemmanager=y" >> .config
-        echo "CONFIG_PACKAGE_libmbim=y" >> .config
-        echo "CONFIG_PACKAGE_picocom=y" >> .config
-
-        # 4. Финализируем конфигурацию с учетом добавленных пакетов
+        
+        # Полностью формируем правильный конфигурационный файл с нуля
+        cat << 'EOF' > .config
+        CONFIG_TARGET_ramips=y
+        CONFIG_TARGET_ramips_mt76x8=y
+        CONFIG_TARGET_MULTI_PROFILE=n
+        CONFIG_TARGET_DEVICE_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y
+        
+        # Интерфейс и системные настройки
+        CONFIG_PACKAGE_luci=y
+        
+        # Пакеты для LTE-модемов и USB
+        CONFIG_PACKAGE_kmod-usb-net-rndis=y
+        CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
+        CONFIG_PACKAGE_modemmanager=y
+        CONFIG_PACKAGE_luci-proto-modemmanager=y
+        CONFIG_PACKAGE_libmbim=y
+        CONFIG_PACKAGE_picocom=y
+        EOF
+        
+        # Запускаем генерацию. Система сама развернет зависимости для Mango
         make defconfig
 
     - name: Compile Firmware
