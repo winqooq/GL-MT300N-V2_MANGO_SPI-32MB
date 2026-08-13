@@ -38,20 +38,31 @@ jobs:
         ./scripts/feeds update -a || ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: Apply 32MB Flash Patch (DTS Modification)
+    - name: Apply 32MB Flash Patch (DTS Modification & Image Size)
       run: |
         cd openwrt
-        # Ищем файл DTS автоматически по маске для GL-MT300N V2
+        
+        # 1. Ищем и патчим DTS для переразметки разделов памяти
         DTS_FILE=$(find target/linux -name "*gl-mt300n-v2*.dts" | head -n 1)
         if [ -n "$DTS_FILE" ] && [ -f "$DTS_FILE" ]; then
           echo "Found DTS file: $DTS_FILE"
-          # 1. Увеличиваем общий размер чипа до 32MB (0x2000000)
           sed -i 's/reg = <0x0 0x1000000>;/reg = <0x0 0x2000000>;/g' "$DTS_FILE"
-          # 2. Растягиваем раздел firmware на весь оставшийся объем 32MB чипа
           sed -i 's/reg = <0x50000 0xfb0000>;/reg = <0x50000 0x1fb0000>;/g' "$DTS_FILE"
           echo "DTS successfully patched for full 32MB flash storage!"
         else
-          echo "Error: DTS file not found anywhere!"
+          echo "Error: DTS file not found!"
+          exit 1
+        fi
+
+        # 2. Ищем и патчим Makefile для увеличения лимита генерации образа
+        MK_FILE=$(find target/linux/ramips/image -name "mt76x8.mk" | head -n 1)
+        if [ -n "$MK_FILE" ] && [ -f "$MK_FILE" ]; then
+          echo "Found Makefile: $MK_FILE"
+          # Ищем блок устройства и меняем IMAGE_SIZE на ~32MB (32768k минус размер u-boot)
+          sed -i '/define Device\/glinet_gl-mt300n-v2/,/endef/ s/IMAGE_SIZE := .*/IMAGE_SIZE := 32448k/g' "$MK_FILE"
+          echo "Makefile IMAGE_SIZE correctly increased to 32MB!"
+        else
+          echo "Error: mt76x8.mk file not found!"
           exit 1
         fi
 
@@ -81,17 +92,17 @@ jobs:
       run: |
         cd openwrt
         
-        # Полностью формируем правильный конфигурационный файл с нуля
-        cat << 'EOF' > .config
-        CONFIG_TARGET_ramips=y
-        CONFIG_TARGET_ramips_mt76x8=y
-        CONFIG_TARGET_MULTI_PROFILE=n
-        CONFIG_TARGET_DEVICE_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y
-        
-        # Интерфейс и системные настройки
+        # 1. Задаем базовый чипсет и генерируем заготовку конфигурации
+        echo "CONFIG_TARGET_ramips=y" > .config
+        echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
+        make defconfig
+
+        # 2. Принудительно включаем профиль роутера Mango через sed
+        sed -i 's/# CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2 is not set/CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y/g' .config
+
+        # 3. Добавляем веб-интерфейс LuCI и пакеты для LTE-модемов
+        cat << 'EOF' >> .config
         CONFIG_PACKAGE_luci=y
-        
-        # Пакеты для LTE-модемов и USB
         CONFIG_PACKAGE_kmod-usb-net-rndis=y
         CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
         CONFIG_PACKAGE_modemmanager=y
@@ -99,8 +110,8 @@ jobs:
         CONFIG_PACKAGE_libmbim=y
         CONFIG_PACKAGE_picocom=y
         EOF
-        
-        # Запускаем генерацию. Система сама развернет зависимости для Mango
+
+        # 4. Просчитываем и связываем зависимости всех добавленных пакетов
         make defconfig
 
     - name: Compile Firmware
