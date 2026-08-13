@@ -61,13 +61,21 @@ jobs:
         mkdir -p files/etc/uci-defaults
         cat << 'EOF' > files/etc/uci-defaults/99-custom-settings
         #!/bin/sh
-        uci set system.@system[0].hostname='Mango'
-        uci set network.lan.ipaddr='192.168.8.1'
-        uci commit system
-        uci commit network
+        
+        # Настраиваем hostname и LAN с длиной префикса (CIDR /24) для OpenWrt 25+
+        uci -q batch << EOI
+        set system.@system[0].hostname='Mango'
+        set network.lan.ipaddr='192.168.8.1/24'
+        delete network.lan.netmask
+        commit system
+        commit network
+        EOI
+        
         exit 0
         EOF
-        chmod +x files/etc/uci-defaults/99-custom-settings
+        
+        # Согласно документации OpenWrt, скрипты uci-defaults не должны быть исполняемыми в папке files
+        chmod -x files/etc/uci-defaults/99-custom-settings
 
     - name: Generate Configuration
       run: |
