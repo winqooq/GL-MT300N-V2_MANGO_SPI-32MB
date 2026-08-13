@@ -1,5 +1,5 @@
 name: Build OpenWrt for GL.iNet GL-MT300N V2 (Mango) [SPI-32MB_Mod]
-        # TEST bild v.X.X.X
+        # TEST bild v.0.0.3
         # Create code by Copilot and winqooq
 on:
   workflow_dispatch:
@@ -11,6 +11,7 @@ jobs:
       OWRT_VERSION: "25.12.2"
       DEVICE_NAME: "glinet_gl-mt300n-v2"
       MOD_NAME: "SPI32Mod"
+      MOD_TYPE: "clean"
 
     steps:
       - name: Checkout repository
@@ -73,16 +74,16 @@ jobs:
           cat << 'EOF' > files/etc/uci-defaults/99-custom-settings
           #!/bin/sh
           
-          # Настраиваем hostname, LAN и включаем точку доступа Wi-Fi "Mango" с паролем "Mango"
+          # Настраиваем hostname, LAN и включаем точку доступа Wi-Fi "Mango_2026" с паролем "Mango_2026"
           uci -q batch << EOI
           set system.@system[0].hostname='Mango'
           set network.lan.ipaddr='192.168.8.1/24'
           delete network.lan.netmask
           set wireless.@wifi-device[0].disabled='0'
           set wireless.@wifi-iface[0].disabled='0'
-          set wireless.@wifi-iface[0].ssid='Mango'
+          set wireless.@wifi-iface[0].ssid='Mango_2026'
           set wireless.@wifi-iface[0].encryption='psk2'
-          set wireless.@wifi-iface[0].key='Mango'
+          set wireless.@wifi-iface[0].key='Mango_2026'
           commit system
           commit network
           commit wireless
@@ -145,7 +146,7 @@ jobs:
           SRC_FILE=$(ls *-sysupgrade.bin | head -n 1)
           
           # Формируем логичное имя из глобальных переменных env
-          NEW_NAME="openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-squashfs-sysupgrade.bin"
+          NEW_NAME="openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-${{ env.MOD_TYPE }}-sysupgrade.bin"
           
           # Переименовываем файл
           mv "$SRC_FILE" "$NEW_NAME"
@@ -160,6 +161,6 @@ jobs:
         if: steps.organize.outputs.status == 'success'
         with:
           # Название ZIP-архива, который будет скачиваться из GitHub Actions
-          name: openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}
+          name: openwrt-${{ env.OWRT_VERSION }}-${{ env.DEVICE_NAME }}-${{ env.MOD_NAME }}-${{ env.MOD_TYPE }}
           # Файл, который помещается внутрь архива
-          path: ${{ env.FIRMWARE_PATH }}/${{ env.FIRMWARE_NAME }}
+          path: ${{ env.FIRMWARE_PATH }}/${{ env.FIRMWARE_NAME }}-${{ env.MOD_TYPE }}
