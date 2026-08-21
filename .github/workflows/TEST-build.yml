@@ -1,5 +1,5 @@
 name: Build OpenWrt for GL.iNet GL-MT300N V2 (Mango) [SPI-32MB_Mod]
-        # TEST bild v.0.0.3
+        # TEST bild v.0.0.4
         # Create code by Gemini and winqooq
 on:
   workflow_dispatch:
@@ -67,7 +67,7 @@ jobs:
             exit 1
           fi
 
-      - name: Set Custom Hostname, LAN IP and Wi-Fi
+      - name: Set Custom Hostname, LAN IP, Wi-Fi and Auto-Telnet
         run: |
           cd openwrt
           mkdir -p files/etc/uci-defaults
@@ -95,6 +95,18 @@ jobs:
           # Согласно документации OpenWrt, скрипты uci-defaults не должны быть исполняемыми в папке files
           chmod -x files/etc/uci-defaults/99-custom-settings
 
+          # Создаем rc.local для автоматического запуска Telnet-сервера без пароля
+          mkdir -p files/etc
+          cat << 'EOF' > files/etc/rc.local
+          #!/bin/sh
+          # Запуск Telnet-демона без пароля и запроса логина (прямой вход в /bin/sh)
+          telnetd -l /bin/sh &
+          exit 0
+          EOF
+          
+          # А вот rc.local ОБЯЗАТЕЛЬНО должен быть исполняемым
+          chmod +x files/etc/rc.local
+
       - name: Generate Configuration
         run: |
           cd openwrt
@@ -107,15 +119,16 @@ jobs:
           # 2. Принудительно применим профиль роутера Mango
           sed -i 's/# CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2 is not set/CONFIG_TARGET_ramips_mt76x8_DEVICE_glinet_gl-mt300n-v2=y/g' .config
 
-          # 3. Добавляем веб-интерфейс LuCI
+          # 3. Добавляем веб-интерфейс LuCI, драйверы и низкоуровневые модули ядра
           cat << 'EOF' >> .config
           CONFIG_PACKAGE_luci=y
-          # Базовые USB-драйверы ядра
+          
+          # Базовые USB-драйверы ядра (без них USB работать не будет)
           CONFIG_PACKAGE_usbutils=y
           CONFIG_PACKAGE_kmod-usb-core=y
           CONFIG_PACKAGE_kmod-usb2=y
           
-          # Драйверы для MBIM и RNDIS
+          # Драйверы для MBIM и RNDIS (поддержка MBIM модемов и Android телефона в режиме "USB Модем")
           CONFIG_PACKAGE_kmod-usb-net-cdc-mbim=y
           CONFIG_PACKAGE_kmod-usb-net-rndis=y
           CONFIG_PACKAGE_kmod-wwan=y
@@ -123,11 +136,19 @@ jobs:
           CONFIG_PACKAGE_kmod-usb-serial-option=y
           CONFIG_PACKAGE_usb-modeswitch=y
           
-          # Полноценный стек ModemManager
+          # Полноценный стек ModemManager (для работы с MBIM модемами)
           CONFIG_PACKAGE_modemmanager=y
           CONFIG_PACKAGE_luci-proto-modemmanager=y
           CONFIG_PACKAGE_libmbim=y
           CONFIG_PACKAGE_picocom=y
+
+          # Низкоуровневые пакеты, чтобы можно было поставить mwan3 (на случай если будет подключено больше 1-го модема)
+          CONFIG_PACKAGE_kmod-ip6tables=y
+          CONFIG_PACKAGE_kmod-nft-compat=y
+          CONFIG_PACKAGE_kmod-ipt-core=y
+          CONFIG_PACKAGE_kmod-ipt-ipset=y
+          CONFIG_PACKAGE_kmod-ipt-conntrack-extra=y
+          CONFIG_PACKAGE_kmod-ipt-ipopt=y
           EOF
 
           # 4. Финализируем конфигурацию с учетом добавленных пакетов
