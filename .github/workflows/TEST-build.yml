@@ -1,5 +1,5 @@
 name: Build OpenWrt for GL.iNet GL-MT300N V2 (Mango) [SPI-32MB_Mod]
-        # TEST bild v.0.0.4
+        # TEST bild v.0.0.5
         # Create code by Gemini and winqooq
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-22.04
     # Глобальные переменные для удобного управления версией и названием файлов
     env:
-      OWRT_VERSION: "25.12.2"
+      OWRT_VERSION: "24.10.8"
       DEVICE_NAME: "glinet_gl-mt300n-v2"
       MOD_NAME: "SPI32Mod"
       MOD_TYPE: "test"
@@ -29,8 +29,8 @@ jobs:
 
       - name: Clone OpenWrt Source
         run: |
-          # Клонируем стабильную ветку OpenWrt 25.12 (с поддержкой apk)
-          git clone -b openwrt-25.12 https://github.com/openwrt/openwrt.git openwrt
+          # Клонируем конкретную версию OpenWrt по тегу с глубиной истории 1 для максимальной стабильности и скорости
+          git clone --depth 1 --branch v${{ env.OWRT_VERSION }} https://github.com/openwrt/openwrt.git openwrt
 
       - name: Update Feeds
         run: |
